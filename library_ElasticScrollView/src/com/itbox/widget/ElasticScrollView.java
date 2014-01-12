@@ -6,8 +6,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.TranslateAnimation;
-import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.Scroller;
 
 /**
  * ScrollView反弹效果的实现
@@ -15,14 +15,18 @@ import android.widget.ScrollView;
  */
 public class ElasticScrollView extends ScrollView {
 	private static final float DAMP_COEFFICIENT = 2;
+	private static final int ELASTIC_DELAY = 500;
 	private float damk = DAMP_COEFFICIENT;
+	private int delay = ELASTIC_DELAY;
 	private View inner;
 
 	private float y;
 
 	private Rect normal = new Rect();
 	private View elasticView;
-	private int height;;
+	private int height;
+	
+	private Scroller mScroller;
 
 	public ElasticScrollView(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -33,6 +37,7 @@ public class ElasticScrollView extends ScrollView {
 		if (getChildCount() > 0) {
 			inner = getChildAt(0);
 		}
+		mScroller = new Scroller(getContext());
 	}
 
 	public void setElasticView(View view){
@@ -58,6 +63,14 @@ public class ElasticScrollView extends ScrollView {
 		this.damk = damk;
 	}
 
+	public int getDelay() {
+		return delay;
+	}
+
+	public void setDelay(int delay) {
+		this.delay = delay;
+	}
+
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
 		if (inner == null) {
@@ -68,6 +81,17 @@ public class ElasticScrollView extends ScrollView {
 		return super.onTouchEvent(ev);
 	}
 
+	@Override
+	public void computeScroll() {
+		super.computeScroll();
+		if (mScroller.computeScrollOffset()) {
+			android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
+			layoutParams.height = mScroller.getCurrY();
+			elasticView.setLayoutParams(layoutParams);
+			invalidate();
+		}
+	}
+	
 	public void commOnTouchEvent(MotionEvent ev) {
 		int action = ev.getAction();
 		switch (action) {
@@ -83,8 +107,10 @@ public class ElasticScrollView extends ScrollView {
 			if (isNeedAnimation()) {
 				if(null != elasticView){
 					android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
-					layoutParams.height = height;
-					elasticView.setLayoutParams(layoutParams);
+//					layoutParams.height = height;
+//					elasticView.setLayoutParams(layoutParams);
+					mScroller.startScroll(0, layoutParams.height, 0, height - layoutParams.height, delay);
+					invalidate();
 					
 				}else{
 					animation();
