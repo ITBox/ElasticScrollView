@@ -11,4 +11,4 @@ setElasticVIew()设置被拉伸的View.如果不设置或设置为null,则Scroll
 
 [![bill2012](http://images.51cto.com/files/uploadimg/20120626/152200198.jpg)](http://mobile.51cto.com/hot-344448.htm)
 
-[![bill2013](http://s1.51cto.com/wyfs01/M01/09/AA/wKioOVGUpFuxnxYDAACH-S-PC8U579.jpg)](http://mobile.51cto.com/news-394173.htm)
+[![bill2013](./image/google_io_2013.jpg)](http://mobile.51cto.com/news-394173.htm)
