@@ -11,169 +11,205 @@ import android.widget.Scroller;
 
 /**
  * ScrollView反弹效果的实现
- * 
  */
 public class ElasticScrollView extends ScrollView {
-	private static final float DAMP_COEFFICIENT = 2;
-	private static final int ELASTIC_DELAY = 500;
-	private float damk = DAMP_COEFFICIENT;
-	private int delay = ELASTIC_DELAY;
-	private View inner;
+    private static final float DAMP_COEFFICIENT = 2;
 
-	private float y;
+    private static final int ELASTIC_DELAY = 200;
 
-	private Rect normal = new Rect();
-	private View elasticView;
-	private int height;
-	
-	private Scroller mScroller;
+    private static final int TOP_Y = 0;
+    /**
+     * 阻力
+     */
+    private float damk = DAMP_COEFFICIENT;
+    /**
+     * 回弹延迟
+     */
+    private int restoreDelay = ELASTIC_DELAY;
+    
+    /**
+     * ScrollView的子View (ScrollView只能有一个子View)
+     */
+    private View mInnerView;
+    private View elasticView;
 
-	public ElasticScrollView(Context context, AttributeSet attrs) {
-		super(context, attrs);
-	}
+    private float startY;
+    private int originHeight;
+    private Rect normalRect = new Rect();
+    private Scroller mScroller;
+    
 
-	@Override
-	protected void onFinishInflate() {
-		if (getChildCount() > 0) {
-			inner = getChildAt(0);
-		}
-		mScroller = new Scroller(getContext());
-	}
 
-	public void setElasticView(View view){
-		if(elasticView != null){
-			android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
-			layoutParams.height = height;
-			elasticView.setLayoutParams(layoutParams);
-		}
-		if(null != view){
-			height = view.getLayoutParams().height;
-		}
-		elasticView = view;
-	}
-	public View getElasticView(){
-		return elasticView;
-	}
-	
-	public float getDamk() {
-		return damk;
-	}
+    public ElasticScrollView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
 
-	public void setDamk(float damk) {
-		this.damk = damk;
-	}
+    @Override
+    protected void onFinishInflate() {
+        if (getChildCount() > 0) {
+            mInnerView = getChildAt(0);
+        }
+        mScroller = new Scroller(getContext());
+    }
 
-	public int getDelay() {
-		return delay;
-	}
+    public void setElasticView(View view) {
+        refreshOriginHeight(view);
+        elasticView = view;
+    }
 
-	public void setDelay(int delay) {
-		this.delay = delay;
-	}
+    public View getElasticView() {
+        return elasticView;
+    }
 
-	@Override
-	public boolean onTouchEvent(MotionEvent ev) {
-		if (inner == null) {
-			return super.onTouchEvent(ev);
-		} else {
-			commOnTouchEvent(ev);
-		}
-		return super.onTouchEvent(ev);
-	}
+    public float getDamk() {
+        return damk;
+    }
 
-	@Override
-	public void computeScroll() {
-		super.computeScroll();
-		if (mScroller.computeScrollOffset()) {
-			android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
-			layoutParams.height = mScroller.getCurrY();
-			elasticView.setLayoutParams(layoutParams);
-			invalidate();
-		}
-	}
-	
-	public void commOnTouchEvent(MotionEvent ev) {
-		int action = ev.getAction();
-		switch (action) {
-		case MotionEvent.ACTION_DOWN:
-			y = ev.getY();
-//			if(elasticView == null && inner instanceof ViewGroup && ((ViewGroup)inner).getChildCount()>0){
-//				elasticView = ((ViewGroup)inner).getChildAt(0);
-//				height = elasticView.getLayoutParams().height;
-//			}
-			break;
-		case MotionEvent.ACTION_UP:
+    public void setDamk(float damk) {
+        this.damk = damk;
+    }
 
-			if (isNeedAnimation()) {
-				if(null != elasticView){
-					android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
-//					layoutParams.height = height;
-//					elasticView.setLayoutParams(layoutParams);
-					mScroller.startScroll(0, layoutParams.height, 0, height - layoutParams.height, delay);
-					invalidate();
-					
-				}else{
-					animation();
-				}
-			}
-			break;
-		case MotionEvent.ACTION_MOVE:
-			final float preY = y;
-			float nowY = ev.getY();
-			int deltaY = (int) ((preY - nowY) / damk);
-			// 滚动
-			scrollBy(0, deltaY);
+    public int getRestoreDelay() {
+        return restoreDelay;
+    }
 
-			y = nowY;
-			// 当滚动到最上或者最下时就不会再滚动，这时移动布局
-			if (isNeedMove()) {
-				if (normal.isEmpty()) {
-					// 保存正常的布局位置
-					normal.set(inner.getLeft(), inner.getTop(),	inner.getRight(), inner.getBottom());
-				}
-				// 移动布局
-				if(elasticView != null){
-					android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
-					layoutParams.height -= deltaY;
-					elasticView.setLayoutParams(layoutParams);
-				}else{
-					inner.layout(inner.getLeft(), inner.getTop() - deltaY, inner.getRight(), inner.getBottom() - deltaY);
-				}
-			}
-			break;
-		default:
-			break;
-		}
-	}
+    public void setRestoreDelay(int restoreDelay) {
+        this.restoreDelay = restoreDelay;
+    }
 
-	// 开启动画移动
+    @Override
+    public boolean onTouchEvent(MotionEvent ev) {
+        if (mInnerView != null) {
+            computeMove(ev);
+        }
+        return super.onTouchEvent(ev);
+    }
 
-	public void animation() {
-		// 开启移动动画
-		TranslateAnimation ta = new TranslateAnimation(0, 0, inner.getTop(), normal.top);
-		ta.setDuration(200);
-		inner.startAnimation(ta);
-		// 设置回到正常的布局位置
-		inner.layout(normal.left, normal.top, normal.right, normal.bottom);
+    private void computeMove(MotionEvent event) {
+        int action = event.getAction();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: {
+                startY = event.getY();
+                break;
+            }
+            case MotionEvent.ACTION_UP: {
+                doRestore();
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                doMove(event);
+                break;
+            }
+            default:
+                break;
+        }
+    }
 
-		normal.setEmpty();
+    private int computeDeltaY(MotionEvent event) {
+        float currentY = event.getY();
 
-	}
+        int deltaY = (int) ((startY - currentY) / damk);
+        startY = currentY;
 
-	// 是否需要开启动画
-	public boolean isNeedAnimation() {
-		return !normal.isEmpty();
-	}
+        return deltaY;
+    }
 
-	// 是否需要移动布局
-	public boolean isNeedMove() {
+    private void doMove(MotionEvent event) {
+        int deltaY = computeDeltaY(event);
 
-		int offset = inner.getMeasuredHeight() - getHeight();
-		int scrollY = getScrollY();
-		if (scrollY == 0 || scrollY == offset) {
-			return true;
-		}
-		return false;
-	}
+        if (!isNeedMove(deltaY)) {
+            return;
+        }
 
+        refreshNormalRect();
+
+        if (elasticView != null) {
+            moveElasticView(deltaY);
+        } else {
+            moveInnerView(deltaY);
+        }
+    }
+
+    private void refreshOriginHeight(View view) {
+        if (elasticView != null) {
+            android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
+            layoutParams.height = originHeight;
+            elasticView.setLayoutParams(layoutParams);
+        }
+        if (null != view) {
+            originHeight = view.getLayoutParams().height;
+        }
+    }
+
+    private void refreshNormalRect() {
+        if (!normalRect.isEmpty()) {// 保存正常的布局位置
+        	return;
+        }
+        normalRect.set(mInnerView.getLeft(), mInnerView.getTop(), mInnerView.getRight(), mInnerView.getBottom());
+    }
+
+    private void moveInnerView(int deltaY) {
+        mInnerView.layout(mInnerView.getLeft(), mInnerView.getTop() - deltaY, mInnerView.getRight(), mInnerView.getBottom() - deltaY);
+    }
+
+    private void moveElasticView(int deltaY) {
+        android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
+        layoutParams.height -= deltaY;
+        elasticView.setLayoutParams(layoutParams);
+    }
+
+    // 是否需要还原
+    private boolean isNeedRestore() {
+        return !normalRect.isEmpty();
+    }
+
+    private void doRestore() {
+        if (!isNeedRestore()) {
+        	return;
+        }
+        
+        if (elasticView != null) {
+        	restoreElasticView();
+        } else {
+        	restoreInnerView();
+        }
+    }
+
+    private void restoreElasticView() {
+        android.view.ViewGroup.LayoutParams layoutParams = elasticView.getLayoutParams();
+        mScroller.startScroll(0, layoutParams.height, 0, originHeight - layoutParams.height, restoreDelay);
+        invalidate();
+    }
+
+    private void restoreInnerView() {
+        TranslateAnimation ta = new TranslateAnimation(0, 0, mInnerView.getTop(), normalRect.top);
+        ta.setDuration(restoreDelay);
+        mInnerView.startAnimation(ta);// 开启移动动画
+        
+        mInnerView.layout(normalRect.left, normalRect.top, normalRect.right, normalRect.bottom);// 设置回到正常的布局位置
+
+        normalRect.setEmpty();
+    }
+
+    // 是否需要移动布局
+    private boolean isNeedMove(int deltaY) {
+        if (deltaY < 0) {
+            return isNeedMoveTop();
+        }
+        if (deltaY > 0) {
+            return isNeedMoveBottom();
+        }
+        return false;
+    }
+
+    private boolean isNeedMoveTop() {
+        int scrollY = getScrollY();
+        return (scrollY == TOP_Y);
+    }
+
+    private boolean isNeedMoveBottom() {
+        int offset = mInnerView.getMeasuredHeight() - getHeight();
+        int scrollY = getScrollY();
+        return (scrollY == offset);
+    }
 }
