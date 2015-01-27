@@ -1,3 +1,4 @@
 
-library_ElasticScrollView/bin
-library_ElasticScrollView/gen
+*/bin/
+*/gen/
+*/*.iml
