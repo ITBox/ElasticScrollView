@@ -13,7 +13,12 @@ import android.widget.Scroller;
  * ScrollView反弹效果的实现
  */
 public class ElasticScrollView extends ScrollView {
-    private static final float DAMP_COEFFICIENT = 2;
+    /**
+     * 区分点击or滑动
+     */
+    private static final int SHAKE_THRESHOLD_VALUE = 3;
+
+    private static final int DAMP_COEFFICIENT = 2;
 
     private static final int ELASTIC_DELAY = 200;
 
@@ -26,7 +31,7 @@ public class ElasticScrollView extends ScrollView {
      * 回弹延迟
      */
     private int restoreDelay = ELASTIC_DELAY;
-    
+
     /**
      * ScrollView的子View (ScrollView只能有一个子View)
      */
@@ -37,7 +42,7 @@ public class ElasticScrollView extends ScrollView {
     private int originHeight;
     private Rect normalRect = new Rect();
     private Scroller mScroller;
-    
+
 
 
     public ElasticScrollView(Context context, AttributeSet attrs) {
@@ -78,6 +83,25 @@ public class ElasticScrollView extends ScrollView {
     }
 
     @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        int action = ev.getAction();
+        System.out.println("onInterceptTouchEvent: "+action);
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: {
+                startY = ev.getY();
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                float currentY = ev.getY();
+                float scrollY = currentY - startY;
+
+                return Math.abs(scrollY) > SHAKE_THRESHOLD_VALUE;
+            }
+        }
+        return super.onInterceptTouchEvent(ev);
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent ev) {
         if (mInnerView != null) {
             computeMove(ev);
@@ -87,13 +111,14 @@ public class ElasticScrollView extends ScrollView {
 
     private void computeMove(MotionEvent event) {
         int action = event.getAction();
+        System.out.println("onTouchEvent: "+action);
         switch (action) {
-            case MotionEvent.ACTION_DOWN: {
-                startY = event.getY();
-                break;
-            }
+//            case MotionEvent.ACTION_DOWN: {
+//                startY = event.getY();
+//                break;
+//            }
             case MotionEvent.ACTION_UP: {
-                doRestore();
+                doReset();
                 break;
             }
             case MotionEvent.ACTION_MOVE: {
@@ -143,7 +168,7 @@ public class ElasticScrollView extends ScrollView {
 
     private void refreshNormalRect() {
         if (!normalRect.isEmpty()) {// 保存正常的布局位置
-        	return;
+            return;
         }
         normalRect.set(mInnerView.getLeft(), mInnerView.getTop(), mInnerView.getRight(), mInnerView.getBottom());
     }
@@ -163,15 +188,15 @@ public class ElasticScrollView extends ScrollView {
         return !normalRect.isEmpty();
     }
 
-    private void doRestore() {
+    private void doReset() {
         if (!isNeedRestore()) {
-        	return;
+            return;
         }
-        
+
         if (elasticView != null) {
-        	restoreElasticView();
+            restoreElasticView();
         } else {
-        	restoreInnerView();
+            restoreInnerView();
         }
     }
 
@@ -185,7 +210,7 @@ public class ElasticScrollView extends ScrollView {
         TranslateAnimation ta = new TranslateAnimation(0, 0, mInnerView.getTop(), normalRect.top);
         ta.setDuration(restoreDelay);
         mInnerView.startAnimation(ta);// 开启移动动画
-        
+
         mInnerView.layout(normalRect.left, normalRect.top, normalRect.right, normalRect.bottom);// 设置回到正常的布局位置
 
         normalRect.setEmpty();
@@ -193,13 +218,14 @@ public class ElasticScrollView extends ScrollView {
 
     // 是否需要移动布局
     private boolean isNeedMove(int deltaY) {
-        if (deltaY < 0) {
-            return isNeedMoveTop();
-        }
-        if (deltaY > 0) {
-            return isNeedMoveBottom();
-        }
-        return false;
+        return deltaY == 0 ? false : (deltaY < 0 ? isNeedMoveTop() : isNeedMoveBottom());
+//        if (deltaY < 0) {
+//            return isNeedMoveTop();
+//        }
+//        if (deltaY > 0) {
+//            return isNeedMoveBottom();
+//        }
+//        return false;
     }
 
     private boolean isNeedMoveTop() {
@@ -209,6 +235,8 @@ public class ElasticScrollView extends ScrollView {
 
     private boolean isNeedMoveBottom() {
         int offset = mInnerView.getMeasuredHeight() - getHeight();
+        offset = (offset < 0) ? 0 : offset;
+
         int scrollY = getScrollY();
         return (scrollY == offset);
     }
