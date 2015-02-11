@@ -5,7 +5,7 @@ ElasticScrollView
 setDamk()设置滑动的阻力<br/>
 setElasticVIew()设置被拉伸的View.如果不设置或设置为null,则ScrollVie跟随手势移动
 
-项目转移到 ![Kitdroid](https://github.com/Kitdroid/ElasticScrollView)
+项目转移到 [Kitdroid](https://github.com/Kitdroid/ElasticScrollView)
 <!--[![bill2010](./image/google_io_2010.jpg)](http://developer.51cto.com/art/201005/200953.htm)-->
 
 <!--[![bill2011](./image/google_io_2011.jpg)](http://mobile.51cto.com/googleio-260983.htm)-->
